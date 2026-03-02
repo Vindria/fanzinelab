@@ -294,8 +294,10 @@ if pagina == "Vista previa":
 
     st.markdown("### 🧾 Vista de impresión")
 
+    st.info("Vista previa aproximada. El PDF final se imprime correctamente.")
+
     img_preview = generar_preview_real(textos, imagenes)
-    st.image(img_preview, width="stretch")
+    st.image(img_preview, width=700)
 
     if st.button("✏️ Volver a editar"):
         st.session_state.pagina = "Crear"
