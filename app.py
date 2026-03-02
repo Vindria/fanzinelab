@@ -5,7 +5,6 @@ from reportlab.platypus import Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.utils import ImageReader
 from PIL import Image, ImageDraw, ImageFont, PngImagePlugin
-from datetime import datetime
 import os
 import urllib.parse
 
@@ -53,7 +52,7 @@ FanzineLab es un espacio para experimentar con la escritura, la imagen y la narr
 Permite crear un fanzine que puede:
 
 - Imprimirse en formato físico  
-- Cmpartirse digitalmente  
+- Compartirse digitalmente  
 - Publicarse como carrusel en redes sociales  
 
 ---
@@ -65,8 +64,8 @@ Permite crear un fanzine que puede:
    - Piensa qué quieres compartir  
 
 2. **Construcción**
-   - Escribe textos breves, o no
-   - Agrega imágenes o dibujos (tómale foto) 
+   - Escribe textos breves, o no  
+   - Agrega imágenes o dibujos (tómale foto)  
    - Experimenta con la composición  
 
 3. **Organización**
@@ -91,7 +90,7 @@ Permite crear un fanzine que puede:
 
 ---
 
-## 🖨️ Salida física
+## 🖨️ Impreso 
 
 - Imprime en hoja tamaño carta  
 - Dobla y corta para formar el cuadernillo  
@@ -120,7 +119,6 @@ Creative Commons BY-NC-SA
 - Debes dar crédito  
 - No usar con fines comerciales  
 - Compartir con la misma licencia  
-
 """)
 
     if st.button("✂️ Crear mi Fanzine"):
@@ -135,8 +133,8 @@ if pagina == "Crear":
 
     st.title("🧷 Crear Fanzine")
 
-    nombre = st.text_input("Nombre del autor")
-    titulo = st.text_input("Título del fanzine")
+    nombre = st.text_input("Autor")
+    titulo = st.text_input("Título")
 
     textos = []
     imagenes = []
@@ -150,7 +148,7 @@ if pagina == "Crear":
         textos.append(texto)
         imagenes.append(imagen)
 
-    st.subheader("🎯 Posición del contenido")
+    st.subheader("🎯 Posición")
 
     alineaciones = []
 
@@ -183,52 +181,25 @@ if pagina == "Crear":
 # ======================
 
 def calcular_posicion(h, v, W, H, tw, th):
-
-    if h == "izquierda":
-        x = 60
-    elif h == "centro":
-        x = (W - tw)/2
-    else:
-        x = W - tw - 60
-
-    if v == "arriba":
-        y = 60
-    elif v == "centro":
-        y = (H - th)/2
-    else:
-        y = H - th - 60
-
-    return x,y
-
-# ======================
-# GRID
-# ======================
+    x = 60 if h == "izquierda" else (W - tw)/2 if h == "centro" else W - tw - 60
+    y = 60 if v == "arriba" else (H - th)/2 if v == "centro" else H - th - 60
+    return x, y
 
 def preview_grid(h, v):
-    grid = [[" ", " ", " "],
-            [" ", " ", " "],
-            [" ", " ", " "]]
-
-    col_map = {"izquierda": 0, "centro": 1, "derecha": 2}
-    row_map = {"arriba": 0, "centro": 1, "abajo": 2}
-
+    grid = [[" ", " ", " "],[" ", " ", " "],[" ", " ", " "]]
+    col_map = {"izquierda":0,"centro":1,"derecha":2}
+    row_map = {"arriba":0,"centro":1,"abajo":2}
     grid[row_map[v]][col_map[h]] = "X"
-
     return "\n".join(["[ " + " | ".join(r) + " ]" for r in grid])
 
-# ======================
-# PREVIEW REAL
-# ======================
-
-def generar_preview_real(textos, imagenes, alineaciones):
+def generar_preview_real(textos, imagenes):
 
     W, H = 1100, 850
     base = Image.new("RGB", (W, H), "white")
     draw = ImageDraw.Draw(base)
 
-    cell_w = W // 2
-    cell_h = H // 4
-
+    cell_w = W//2
+    cell_h = H//4
     orden = [7,0,1,6,5,2,3,4]
 
     try:
@@ -252,23 +223,16 @@ def generar_preview_real(textos, imagenes, alineaciones):
             page.paste(img, (0,0))
 
         if textos[idx]:
-            pdraw.text((20,20), textos[idx][:60], fill="black", font=font)
+            pdraw.text((20,20), textos[idx][:50], fill="black", font=font)
 
-        if i in [0,2,4,6]:
-            page = page.rotate(-90, expand=True)
-        else:
-            page = page.rotate(90, expand=True)
+        page = page.rotate(-90 if i in [0,2,4,6] else 90, expand=True)
 
         base.paste(page, (x,y))
         draw.rectangle([x,y,x+cell_w,y+cell_h], outline="black")
 
     return base
 
-# ======================
-# INSTAGRAM
-# ======================
-
-def crear_imagen_instagram(texto, imagen, h, v, n):
+def crear_imagen_instagram(texto, imagen, n):
 
     W,H = 1080,1350
     base = Image.new("RGB",(W,H),"white")
@@ -284,14 +248,16 @@ def crear_imagen_instagram(texto, imagen, h, v, n):
     except:
         font = ImageFont.load_default()
 
-    if texto.strip():
+    if texto:
         draw.text((60,60), texto[:100], fill="white", font=font)
 
     draw.text((20,H-40),"FanzineLab · Vindria · CC",fill=(255,255,255,120),font=font)
 
     meta = PngImagePlugin.PngInfo()
     meta.add_text("Author","FanzineLab por Vindria")
-    meta.add_text("License","CC BY-NC-SA")
+
+    if not os.path.exists("fanzines"):
+        os.makedirs("fanzines")
 
     path = f"fanzines/ig_{n}.png"
     base.save(path, pnginfo=meta)
@@ -317,29 +283,25 @@ if pagina == "Vista previa":
     alineaciones = datos["alineaciones"]
     titulo = datos["titulo"]
 
-    st.markdown("### 📐 Posición del contenido")
+    st.markdown("### 📐 Posición")
 
     cols = st.columns(4)
 
     for i in range(8):
         with cols[i%4]:
-            h, v = alineaciones[i]
             st.text(f"P{i+1}")
-            st.text(preview_grid(h, v))
+            st.text(preview_grid(*alineaciones[i]))
 
     st.markdown("### 🧾 Vista de impresión")
 
-    img_preview = generar_preview_real(textos, imagenes, alineaciones)
+    img_preview = generar_preview_real(textos, imagenes)
     st.image(img_preview, width="stretch")
 
     if st.button("✏️ Volver a editar"):
         st.session_state.pagina = "Crear"
         st.rerun()
 
-    # ======================
     # PDF
-    # ======================
-
     if st.button("📄 Generar PDF"):
 
         if not os.path.exists("fanzines"):
@@ -355,7 +317,6 @@ if pagina == "Vista previa":
 
         cell_w = width/2
         cell_h = height/4
-
         orden = [7,0,1,6,5,2,3,4]
 
         for i,idx in enumerate(orden):
@@ -380,9 +341,7 @@ if pagina == "Vista previa":
                 p = Paragraph(textos[idx], style)
                 tw,th = p.wrap(cell_h-40,cell_w-40)
 
-                h,v = alineaciones[idx]
-                px,py = calcular_posicion(h,v,cell_h,cell_w,tw,th)
-
+                px,py = calcular_posicion(*alineaciones[idx],cell_h,cell_w,tw,th)
                 p.drawOn(c,-cell_h/2+px,-cell_w/2+py)
 
             c.setFont("Helvetica",6)
@@ -401,29 +360,16 @@ if pagina == "Vista previa":
         with open(st.session_state.pdf_path,"rb") as f:
             st.download_button("⬇️ Descargar PDF", f, "fanzine.pdf")
 
-    # ======================
     # INSTAGRAM
-    # ======================
-
     if st.button("📸 Generar imágenes Instagram"):
 
-        ig_paths = []
-
+        paths = []
         for i in range(8):
-            p = crear_imagen_instagram(
-                textos[i],
-                imagenes[i],
-                alineaciones[i][0],
-                alineaciones[i][1],
-                i+1
-            )
-            ig_paths.append(p)
+            paths.append(crear_imagen_instagram(textos[i], imagenes[i], i+1))
 
-        st.session_state.ig_paths = ig_paths
+        st.session_state.ig_paths = paths
 
     if st.session_state.ig_paths:
-
-        st.markdown("### 📸 Páginas")
 
         cols = st.columns(2)
 
@@ -435,10 +381,6 @@ if pagina == "Vista previa":
                 with open(path,"rb") as f:
                     st.download_button(f"⬇️ Página {i+1}", f, f"pagina_{i+1}.png")
 
-    # ======================
     # WHATSAPP
-    # ======================
-
     msg = urllib.parse.quote(f"Mi fanzine: {titulo}")
-
     st.link_button("📱 Compartir en WhatsApp", f"https://wa.me/?text={msg}")
